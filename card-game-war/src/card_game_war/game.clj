@@ -8,29 +8,48 @@
         rank ranks]
     [suit rank]))
 
-(defn rank-position [ranking-list rank-val]
-  (.indexOf ranking-list rank-val))
+(defn rank [card]
+  (last card))
 
-(defn card-rank [card]
-  (rank-position ranks (last card)))
+(defn suit [card]
+  (first card))
 
-(defn suit-rank [card]
-  (rank-position suits (first card)))
+(defn rank-score [card]
+  (.indexOf ranks (rank card)))
 
-(defn play-round [player1-card player2-card]
-  (let [player1-card-rank (card-rank player1-card)
-        player1-suit-rank (suit-rank player1-card)
-        player2-card-rank (card-rank player2-card)
-        player2-suit-rank (suit-rank player2-card)]
-    (if (= player1-card-rank player2-card-rank) (if (> player1-suit-rank player2-suit-rank) 0 1)
-        (if (> player1-card-rank player2-card-rank) 0 1))))
+(defn suit-score [card]
+  (.indexOf suits (suit card)))
+
+(defn card-score [card]
+  (let [rank-score (rank-score card)
+        suit-score (suit-score card)]
+    (+ suit-score (* rank-score (count suits)))))
+
+(defn play-round [card-1 card-2]
+  (let [card-1-score (card-score card-1)
+        card-2-score (card-score card-2)]
+    (if (> card-1-score card-2-score) 0 1)))
+
+(defn out-of-cards? [deck]
+  (zero? (count deck)))
+
+(defn won-card [losing-deck]
+  (first losing-deck))
+
+(defn winning-deck [deck won-card]
+  (let [new-deck (rest deck)
+        winner-card (first deck)]
+    (conj new-deck won-card winner-card)))
+
+(defn losing-deck [deck]
+  (rest deck))
 
 (defn play-game [player1-cards player2-cards]
-  (loop [player1-deck player1-cards player2-deck player2-cards]
-    (cond (zero? (count player2-deck)) 0 ;; Player 1 wins
-          (zero? (count player1-deck)) 1 ;; Player 2 wins
-          :else (let [round-winner (play-round (first player1-deck) (first player2-deck))
-                      player1-winning-deck (reverse (cons (first player1-deck) (cons (first player2-deck) (reverse (rest player1-deck)))))
-                      player2-winning-deck (reverse (cons (first player2-deck) (cons (first player1-deck) (reverse (rest player2-deck)))))]
-            (if (= 0 round-winner) (recur player1-winning-deck (rest player2-deck))
-                                   (recur (rest player1-deck) player2-winning-deck))))))
+  (loop [deck-1 player1-cards deck-2 player2-cards]
+    (cond (out-of-cards? deck-2) 0 ;; Player 1 wins
+          (out-of-cards? deck-1) 1 ;; Player 2 wins
+          :else (let [round-winner (play-round (first deck-1) (first deck-2))]
+            (if (= 0 round-winner) (recur (winning-deck deck-1 (won-card deck-2))
+                                          (losing-deck deck-2))
+                                   (recur (losing-deck deck-1)
+                                          (winning-deck deck-2 (won-card deck-1))))))))
